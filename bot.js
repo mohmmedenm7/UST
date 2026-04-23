@@ -12,23 +12,33 @@ http.createServer((req, res) => {
   console.log(`Health check server listening on port ${PORT}`);
 });
 
-// 2. إعداد Firebase
-// ملاحظة: تأكد أن ملف .json موجود فعلياً في نفس المجلد
+// 2. إعداد Firebase باستخدام متغيرات البيئة (الأكثر أماناً)
 try {
-    const serviceAccount = require('./test-ff854-firebase-adminsdk-1y0kq-c26cc58bb9.json');
+    // نقوم ببناء كائن الاعتماد من المتغيرات التي أضفتها في إعدادات Back4app
+    const firebaseConfig = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      // السطر أدناه يعالج مشكلة الرموز في المفتاح الخاص (Private Key)
+      privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : undefined,
+    };
+
+    if (!firebaseConfig.projectId || !firebaseConfig.privateKey) {
+        throw new Error("بيانات Firebase مفقودة في إعدادات البيئة (Environment Variables)");
+    }
+
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(firebaseConfig),
     });
-    console.log("✅ Firebase connected");
+    console.log("✅ Firebase connected successfully via Environment Variables");
 } catch (e) {
-    console.error("❌ Firebase error: ملف الـ JSON غير موجود أو به خطأ");
+    console.error("❌ Firebase error:", e.message);
 }
 
 const db = admin.firestore();
 
 // 3. إعداد البوت
 if (!process.env.BOT_TOKEN) {
-    console.error("❌ BOT_TOKEN is missing in environment variables!");
+    console.error("❌ BOT_TOKEN is missing!");
     process.exit(1);
 }
 const bot = new Telegraf(process.env.BOT_TOKEN);
@@ -38,17 +48,16 @@ bot.catch((err, ctx) => {
   console.log(`Ooops, encountered an error for ${ctx.updateType}`, err);
 });
 
-// رسالة ترحيب بسيطة للتجربة
-bot.start((ctx) => ctx.reply('أهلاً بك! البوت يعمل الآن بنجاح وبشكل نظيف.'));
+// رسالة ترحيب بسيطة
+bot.start((ctx) => ctx.reply('أهلاً بك! البوت يعمل الآن بنجاح وبشكل نظيف وآمن.'));
 
-// 4. تشغيل البوت (مرة واحدة فقط وبإعدادات التنظيف)
+// 4. تشغيل البوت (مرة واحدة وبإعدادات التنظيف)
 bot.launch({
   dropPendingUpdates: true 
 })
-.then(() => console.log('✅ البوت يعمل الآن بتوكن جديد وبشكل نظيف!'))
+.then(() => console.log('✅ البوت يعمل الآن وبدون أي تعارض!'))
 .catch((error) => {
   console.error('❌ فشل تشغيل البوت:', error);
-  process.exit(1);
 });
 
 // إيقاف آمن
