@@ -31,6 +31,10 @@ const db = admin.firestore();
 // ─────────────────────────────────────────────
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
+// سيطبع هذا السطر أي خطأ يحدث أثناء استلام الرسائل في الـ Logs عندك
+bot.catch((err, ctx) => {
+  console.log(`Ooops, encountered an error for ${ctx.updateType}`, err)
+});
 // ... (بقية دوال المساعدة والتعامل مع Firestore كما هي في كودك) ...
 
 // ─────────────────────────────────────────────
