@@ -46,7 +46,12 @@ bot.launch()
     console.error('❌ فشل تشغيل البوت:', error);
     process.exit(1); // إنهاء العملية في حال فشل البوت
   });
-
+bot.launch({
+  allowedUpdates: [],
+  dropPendingUpdates: true // هذا السطر سيمسح أي رسائل قديمة متراكمة
+}).then(() => {
+  console.log('✅ البوت يعمل الآن بتوكن جديد وبشكل نظيف!');
+});
 // إيقاف آمن
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
