@@ -1,11 +1,9 @@
 const { Telegraf, Markup } = require('telegraf');
 const admin = require('firebase-admin');
-const http = require('http'); // أضفنا هذا السطر
+const http = require('http');
 require('dotenv').config();
 
-// ─────────────────────────────────────────────
-// إعداد خادم ويب بسيط لإرضاء فحص الحالة (Health Check)
-// ─────────────────────────────────────────────
+// 1. خادم فحص الحالة (Health Check)
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -14,44 +12,45 @@ http.createServer((req, res) => {
   console.log(`Health check server listening on port ${PORT}`);
 });
 
-// ─────────────────────────────────────────────
-// إعداد Firebase
-// ─────────────────────────────────────────────
-// تأكد أن ملف الـ JSON موجود في المجلد الرئيسي أو استخدم متغيرات البيئة
-const serviceAccount = require('./test-ff854-firebase-adminsdk-1y0kq-c26cc58bb9.json');
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+// 2. إعداد Firebase
+// ملاحظة: تأكد أن ملف .json موجود فعلياً في نفس المجلد
+try {
+    const serviceAccount = require('./test-ff854-firebase-adminsdk-1y0kq-c26cc58bb9.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log("✅ Firebase connected");
+} catch (e) {
+    console.error("❌ Firebase error: ملف الـ JSON غير موجود أو به خطأ");
+}
 
 const db = admin.firestore();
 
-// ─────────────────────────────────────────────
-// إعداد البوت
-// ─────────────────────────────────────────────
+// 3. إعداد البوت
+if (!process.env.BOT_TOKEN) {
+    console.error("❌ BOT_TOKEN is missing in environment variables!");
+    process.exit(1);
+}
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-// سيطبع هذا السطر أي خطأ يحدث أثناء استلام الرسائل في الـ Logs عندك
+// معالجة الأخطاء
 bot.catch((err, ctx) => {
-  console.log(`Ooops, encountered an error for ${ctx.updateType}`, err)
+  console.log(`Ooops, encountered an error for ${ctx.updateType}`, err);
 });
-// ... (بقية دوال المساعدة والتعامل مع Firestore كما هي في كودك) ...
 
-// ─────────────────────────────────────────────
-// تشغيل البوت
-// ─────────────────────────────────────────────
-bot.launch()
-  .then(() => console.log('🤖 البوت يعمل الآن...'))
-  .catch((error) => {
-    console.error('❌ فشل تشغيل البوت:', error);
-    process.exit(1); // إنهاء العملية في حال فشل البوت
-  });
+// رسالة ترحيب بسيطة للتجربة
+bot.start((ctx) => ctx.reply('أهلاً بك! البوت يعمل الآن بنجاح وبشكل نظيف.'));
+
+// 4. تشغيل البوت (مرة واحدة فقط وبإعدادات التنظيف)
 bot.launch({
-  allowedUpdates: [],
-  dropPendingUpdates: true // هذا السطر سيمسح أي رسائل قديمة متراكمة
-}).then(() => {
-  console.log('✅ البوت يعمل الآن بتوكن جديد وبشكل نظيف!');
+  dropPendingUpdates: true 
+})
+.then(() => console.log('✅ البوت يعمل الآن بتوكن جديد وبشكل نظيف!'))
+.catch((error) => {
+  console.error('❌ فشل تشغيل البوت:', error);
+  process.exit(1);
 });
+
 // إيقاف آمن
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
